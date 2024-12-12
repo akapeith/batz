@@ -1,6 +1,8 @@
 const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
 const fs = require('fs');
 require('dotenv').config(); // For environment variables
+const activeChannels = require('./activechannels'); // Adjust the path if needed
+
 
 const client = new Client({
     intents: [
@@ -30,6 +32,8 @@ for (const file of commandFiles) {
 // Event: Bot is ready
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
+    client.user.setStatus('dnd');  // 'dnd' is the status for Do Not Disturb
+    client.user.setActivity('Creating Batcaves 🦇', { type: 'PLAYING' });  // Custom activity (you can change this message)
 });
 
 // Register commands with Discord API (Global or Guild-specific)
@@ -57,6 +61,22 @@ client.on('interactionCreate', async (interaction) => {
             content: 'There was an error while executing this command!',
             ephemeral: true
         });
+    }
+});
+client.on('voiceStateUpdate', async (oldState, newState) => {
+    const channelId = oldState.channelId || newState.channelId;
+    
+    // Check if the channel is a personal channel in activeChannels map
+    if (channelId && activeChannels.has(channelId)) {
+        const channel = activeChannels.get(channelId);
+
+        // If the channel is empty, delete it
+        const membersInChannel = channel.channel.members.size;
+        if (membersInChannel === 0) {
+            await channel.channel.delete();
+            activeChannels.delete(channelId); // Remove the channel from the active channels map
+            console.log(`Deleted empty channel: ${channel.channel.name}`);
+        }
     }
 });
 
