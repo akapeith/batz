@@ -1,5 +1,6 @@
-const { Client, GatewayIntentBits, Collection, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, REST, Routes, ActivityType} = require('discord.js');
 const fs = require('fs');
+const { getServerConfig } = require('./serverdb.js');
 require('dotenv').config(); // For environment variables
 const activeChannels = require('./activechannels'); // Adjust the path if needed
 
@@ -32,8 +33,10 @@ for (const file of commandFiles) {
 // Event: Bot is ready
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}`);
-    client.user.setStatus('dnd');  // 'dnd' is the status for Do Not Disturb
-    client.user.setActivity('Creating Batcaves 🦇', { type: 'PLAYING' });  // Custom activity (you can change this message)
+    client.user.setStatus('dnd');
+    client.user.setPresence({
+        activities: [{ name: 'Gotham City', type: ActivityType.Watching }],
+    });
 });
 
 // Register commands with Discord API (Global or Guild-specific)
@@ -79,6 +82,33 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
         }
     }
 });
+// Event: Member Joins Guild
+client.on('guildMemberAdd', async member => {
+    const config = await getServerConfig(member.guild.id);
+    const { welcome_channel_id, role_id, welcome_message } = config;
+    if (config) {
+      console.log(welcome_message);
+    }else{
+        console.log('No configuration found.') 
+    }
+  
+      // Send welcome message
+      const channel = member.guild.channels.cache.get(welcome_channel_id);
+      if (channel) {
+        channel.send(welcome_message + `<@${member.user.id}>`);
+      }
+  
+      // Assign role
+      const role = member.guild.roles.cache.get(role_id);
+      if (role) {
+        try {
+          await member.roles.add(role);
+        } catch (error) {
+          console.error(`Failed to assign role: ${error.message}`);
+        }
+      }
+  });
+  
 
 // Log in the bot
 client.login(token);
