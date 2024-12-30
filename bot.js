@@ -85,6 +85,9 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 // Event: Member Joins Guild
 client.on('guildMemberAdd', async member => {
     const config = await getServerConfig(member.guild.id);
+    if(!config){
+        return;
+    }
     const { welcome_channel_id, role_id, welcome_message } = config;
     if (config) {
       console.log(welcome_message);
